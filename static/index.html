@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#081014" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#eef4f3" media="(prefers-color-scheme: light)"><title>XR Media</title><link rel="stylesheet" href="/static/app.css?v=20260923-11-admission-layout">
+</head><body>
+  <div class="corner-actions" hidden><button id="connect" class="corner-action" type="button" title="Reconnect" aria-label="Reconnect">↻</button><button id="layout" class="corner-action" type="button" title="Reset layout" aria-label="Reset layout">▦</button><button id="fullscreen" class="corner-action" type="button" title="Enter fullscreen" aria-label="Enter fullscreen"><span class="fullscreen-glyph" aria-hidden="true"></span></button></div>
+  <dialog id="notice" aria-label="连接提示"><p></p><form method="dialog"><button>知道了</button></form></dialog>
+  <section id="entry" aria-live="polite"><h1>工作空间</h1><p>正在申请进入…</p><button type="button">重试进入</button></section>
+  <main id="workspace" hidden inert><div class="empty-state"><span></span><strong>Waiting for video streams</strong><small>Streams appear here as movable cards</small></div></main>
+  <template id="audio-tile-template"><article class="tile audio-tile">
+    <div class="tile-head"><button type="button" class="drag-handle collapse-toggle" title="Collapse card" aria-label="Collapse card" aria-expanded="true">⠿</button><span class="live-dot"></span><strong class="label"></strong>
+      <details class="info-menu"><summary title="Select visible information">Info</summary><div class="info-options">
+        <label><input type="checkbox" value="format" checked> Format</label><label><input type="checkbox" value="level" checked> Level</label><label><input type="checkbox" value="bitrate" checked> Bitrate</label><label><input type="checkbox" value="jitter" checked> Jitter</label><label><input type="checkbox" value="loss" checked> Packet loss</label><label><input type="checkbox" value="delay" checked> Playout delay</label><label><input type="checkbox" value="codec"> Codec</label>
+      </div></details><button class="audio-output" title="Enable speaker" aria-pressed="false">PC Out</button><span class="window-actions"><button class="restore" data-mode="maximize" title="Maximize card" aria-label="Maximize card"><span class="size-glyph" aria-hidden="true"></span></button></span></div>
+    <canvas class="audio-waveform" width="640" height="180"></canvas><span class="waiting">waiting for audio…</span>
+    <div class="video-info-shell audio-stats-shell"><span class="info-trigger" aria-hidden="true"></span><div class="video-info"><label class="info-pin" title="Pin information"><input type="checkbox" aria-label="Pin information"><span class="pin-icon" aria-hidden="true"></span></label><span data-audio-info="format">16 kHz · mono</span><span data-audio-info="level">level -- dBFS</span><span data-audio-info="bitrate">-- kbps</span><span data-audio-info="jitter">jitter -- ms</span><span data-audio-info="loss">loss --</span><span data-audio-info="delay">delay -- ms</span><span data-audio-info="codec">codec --</span></div></div>
+    <span class="controls-trigger audio-controls-trigger" aria-hidden="true"></span><div class="file-controls audio-controls"><button class="audio-pause playback-icon" type="button" data-state="pause" title="Pause" aria-label="Pause"></button><button class="audio-stop playback-icon" type="button" title="Stop" aria-label="Stop"></button><span class="audio-time">LIVE 0:00</span><label class="volume-control" title="Output volume"><span>VOL</span><input class="audio-volume" type="range" min="0" max="100" step="1" value="80"><output class="audio-volume-value">80%</output></label></div>
+    <audio autoplay playsinline muted></audio>
+  </article></template>
+  <template id="tile-template"><article class="tile">
+    <div class="tile-head"><button type="button" class="drag-handle collapse-toggle" title="Collapse card" aria-label="Collapse card" aria-expanded="true">⠿</button><span class="live-dot"></span><strong class="label"></strong>
+      <details class="info-menu"><summary title="Select visible information">Info</summary><div class="info-options">
+        <label><input type="checkbox" value="resolution" checked> Resolution</label><label><input type="checkbox" value="fps" checked> Display FPS</label>
+        <label><input type="checkbox" value="captureFps" checked> Capture FPS</label><label><input type="checkbox" value="time" checked> Date &amp; time</label>
+        <label><input type="checkbox" value="frames" checked> Frames</label>
+      </div></details><span class="window-actions"><button class="restore" data-mode="maximize" title="Maximize card" aria-label="Maximize card"><span class="size-glyph" aria-hidden="true"></span></button></span></div>
+    <canvas></canvas><video autoplay playsinline muted></video><span class="waiting">waiting for frames…</span>
+    <div class="video-info-shell"><span class="info-trigger" aria-hidden="true"></span><div class="video-info" aria-live="off"><label class="info-pin" title="Pin information"><input type="checkbox" aria-label="Pin information"><span class="pin-icon" aria-hidden="true"></span></label><span data-info="resolution"></span><span data-info="fps"></span><span data-info="captureFps"></span><span data-info="time"></span><span data-info="frames"></span></div></div>
+    <span class="controls-trigger" aria-hidden="true"></span><div class="file-controls" hidden><button class="pause playback-icon" type="button" data-state="pause" title="Pause" aria-label="Pause"></button><button class="file-stop playback-icon" type="button" title="Stop" aria-label="Stop"></button><span class="time">0:00 / 0:00</span></div>
+  </article></template>
+  <template id="input-tile-template"><article class="tile input-tile">
+    <div class="tile-head"><button type="button" class="drag-handle collapse-toggle" title="Collapse card" aria-label="Collapse card" aria-expanded="true">⠿</button><span class="live-dot"></span><strong class="label"></strong>
+      <div class="input-controls"><select class="input-source" title="Input source"><option value="device">Device</option><option value="file">File</option></select><button class="input-file" type="button">Choose</button><input class="input-file-picker" type="file" hidden><button class="input-pc-preview" type="button" aria-pressed="false" disabled>PC View</button><button class="input-pc-speaker" type="button" aria-pressed="false" disabled>PC Out</button></div><span class="window-actions"><button class="restore" data-mode="maximize" title="Maximize card" aria-label="Maximize card"><span class="size-glyph" aria-hidden="true"></span></button></span></div>
+    <video class="input-preview" playsinline muted></video><canvas class="input-waveform" width="640" height="180"></canvas><span class="waiting">select a source</span>
+    <span class="controls-trigger input-playback-trigger" aria-hidden="true"></span><div class="file-controls input-playback-controls"><button class="input-start playback-icon" type="button" data-state="start" title="Start" aria-label="Start"></button><button class="input-stop playback-icon" type="button" title="Stop" aria-label="Stop" disabled></button><span class="input-time file-playback">0:00 / 0:00</span></div>
+  </article></template>
+  <script src="/static/client.js?v=20260923-34-input-ownership"></script>
+</body></html>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>xr_media</name>
+  <version>0.1.0</version>
+  <description>Integrated WebRTC media and WebXR SDK</description>
+  <maintainer email="1506289682@qq.com">kehuanjack</maintainer>
+  <author email="1506289682@qq.com">kehuanjack</author>
+  <license>Apache-2.0</license>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-aiohttp</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

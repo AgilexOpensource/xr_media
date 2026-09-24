@@ -1,0 +1,44 @@
+#xr-stage { position: fixed; z-index: 0; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
+#workspace { z-index: 1; }
+.xr-card { left: 12px; top: 12px; width: min(420px, calc(100vw - 24px)); height: 132px; resize: both; z-index: 1500; }
+.xr-card .xr-size { width: 29px; min-width: 29px; min-height: 29px; padding: 0; display: grid; place-items: center; border-radius: 7px; }
+.xr-lock-hide { position: relative; width: 29px; min-width: 29px; min-height: 29px; padding: 0; display: grid; place-items: center; border-radius: 7px; }
+.xr-lock-hide::before { content: ""; width: 14px; height: 9px; border: 1.5px solid currentColor; border-radius: 50% / 60%; }
+.xr-lock-hide::after { content: ""; position: absolute; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.xr-lock-hide[aria-pressed="true"]::after { width: 18px; height: 1.5px; border-radius: 1px; transform: rotate(-38deg); box-shadow: 0 0 0 1px var(--panel); }
+.xr-lock-hide[aria-pressed="true"] { color: var(--accent); border-color: rgba(88,214,189,.46); background: rgba(88,214,189,.12); }
+.xr-card.collapsed { width: 120px !important; height: 46px !important; }
+.xr-card.collapsed .xr-content, .xr-card.collapsed .window-actions { display: none; }
+.xr-content { height: calc(100% - 46px); padding: 12px; overflow: hidden; color: var(--ink); background: var(--panel-soft); }
+.xr-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.xr-controls label { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .68rem; }
+.xr-controls button { min-height: 30px; }
+.xr-controls input { accent-color: var(--accent); }
+.xr-session { margin-left: auto; }
+.xr-ready { display: block; margin-top: 9px; color: var(--muted); font-size: .68rem; }
+.xr-pose-card { width: min(620px, calc(100vw - 24px)); height: 360px; resize: both; }
+.xr-pose-card.collapsed { width: 150px !important; height: 46px !important; }
+.xr-pose-card.collapsed .xr-pose-canvas { display: none; }
+.xr-pose-canvas { display: block; width: 100%; height: calc(100% - 46px); background: #071013; }
+body.xr-active #workspace { background: rgba(2,7,8,.3); }
+body.xr-active:not(.xr-locked) .corner-action {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+body.xr-active:not(.xr-locked) .tile:not(.collapsed) .video-info {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+body.xr-active:not(.xr-locked) .tile:not(.collapsed) .file-controls {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+body.xr-locked .tile { pointer-events: none; user-select: none; }
+body.xr-locked .tile.xr-hide-when-locked { opacity: 0; visibility: hidden; }
+.tile { transition: border-color .15s ease, box-shadow .15s ease, opacity .16s ease, visibility .16s ease; }
