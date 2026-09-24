@@ -41,19 +41,19 @@ source .venv/bin/activate
 Install the SDK and its Python dependencies:
 
 ```bash
-python -m pip install "git+https://github.com/kehuanjack/xr_media.git"
+python -m pip install "git+https://github.com/AgilexOpensource/xr_media.git"
 ```
 
 For cameras or local video files, use the command including OpenCV instead:
 
 ```bash
-python -m pip install "xr_media[opencv] @ git+https://github.com/kehuanjack/xr_media.git"
+python -m pip install "xr_media[opencv] @ git+https://github.com/AgilexOpensource/xr_media.git"
 ```
 
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/kehuanjack/xr_media.git
+git clone https://github.com/AgilexOpensource/xr_media.git
 cd xr_media
 python -m pip install .
 ```
@@ -70,7 +70,7 @@ python /usr/bin/colcon build --packages-select xr_media --symlink-install
 source install/setup.bash
 ```
 
-Colcon installs the SDK; Python dependencies must still be prepared separately. For a combined bridge build, see [xr_media_ros](https://github.com/kehuanjack/xr_media_ros).
+Colcon installs the SDK; Python dependencies must still be prepared separately. For a combined bridge build, see [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros).
 
 ### Use uv (optional)
 
@@ -79,7 +79,7 @@ Install directly:
 ```bash
 uv venv .venv
 source .venv/bin/activate
-uv pip install "git+https://github.com/kehuanjack/xr_media.git"
+uv pip install "git+https://github.com/AgilexOpensource/xr_media.git"
 xr_media --stream video_test
 ```
 
@@ -134,7 +134,7 @@ Run `xr_media --help` to see all CLI options and their descriptions.
 ## More
 
 - [API reference](docs/API.md): audio/video, XR data, parameters, callbacks and complete examples.
-- [xr_media_ros](https://github.com/kehuanjack/xr_media_ros): ROS 2 bridge for media topics and XR data.
+- [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros): ROS 2 bridge for media topics and XR data.
 
 ## License
 

@@ -41,19 +41,19 @@ source .venv/bin/activate
 安装 SDK 及其 Python 依赖：
 
 ```bash
-python -m pip install "git+https://github.com/kehuanjack/xr_media.git"
+python -m pip install "git+https://github.com/AgilexOpensource/xr_media.git"
 ```
 
 使用摄像头或本地视频文件时，改用包含 OpenCV 的安装命令：
 
 ```bash
-python -m pip install "xr_media[opencv] @ git+https://github.com/kehuanjack/xr_media.git"
+python -m pip install "xr_media[opencv] @ git+https://github.com/AgilexOpensource/xr_media.git"
 ```
 
 ### 2. 克隆后安装
 
 ```bash
-git clone https://github.com/kehuanjack/xr_media.git
+git clone https://github.com/AgilexOpensource/xr_media.git
 cd xr_media
 python -m pip install .
 ```
@@ -70,7 +70,7 @@ python /usr/bin/colcon build --packages-select xr_media --symlink-install
 source install/setup.bash
 ```
 
-此方式由 Colcon 安装 SDK，Python 依赖仍需单独准备；与 ROS 桥接一起构建见 [xr_media_ros](https://github.com/kehuanjack/xr_media_ros)。
+此方式由 Colcon 安装 SDK，Python 依赖仍需单独准备；与 ROS 桥接一起构建见 [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros)。
 
 ### 使用 uv（可选）
 
@@ -79,7 +79,7 @@ source install/setup.bash
 ```bash
 uv venv .venv
 source .venv/bin/activate
-uv pip install "git+https://github.com/kehuanjack/xr_media.git"
+uv pip install "git+https://github.com/AgilexOpensource/xr_media.git"
 xr_media --stream video_test
 ```
 
@@ -134,7 +134,7 @@ xr_media --stream 'music=audio_file:/path/to/music.wav'
 ## 更多用法
 
 - [API 参考](docs/API.zh-CN.md)：音视频收发、XR 数据、参数、回调及完整示例。
-- [xr_media_ros](https://github.com/kehuanjack/xr_media_ros)：音视频话题与 XR 数据的 ROS 2 桥接包。
+- [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros)：音视频话题与 XR 数据的 ROS 2 桥接包。
 
 ## 许可证
 
