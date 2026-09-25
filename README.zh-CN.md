@@ -66,11 +66,14 @@ python -m pip install .
 
 ```bash
 python -m pip install setuptools aiohttp aiortc av numpy
-python /usr/bin/colcon build --packages-select xr_media --symlink-install
+colcon build --packages-select xr_media --symlink-install
 source install/setup.bash
 ```
 
-此方式由 Colcon 安装 SDK，Python 依赖仍需单独准备；与 ROS 桥接一起构建见 [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros)。
+此方式由 Colcon 安装 SDK，Python 依赖仍需单独准备。对于 Colcon 安装的 SDK，
+请使用 `python -m xr_media.cli` 运行 CLI，不要使用 pip 安装时生成的
+`xr_media` 快捷入口；与 ROS 桥接一起构建见
+[xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros)。
 
 ### 使用 uv（可选）
 

@@ -66,11 +66,14 @@ In an existing ROS 2 workspace, place the SDK source at `src/xr_media`. With ROS
 
 ```bash
 python -m pip install setuptools aiohttp aiortc av numpy
-python /usr/bin/colcon build --packages-select xr_media --symlink-install
+colcon build --packages-select xr_media --symlink-install
 source install/setup.bash
 ```
 
-Colcon installs the SDK; Python dependencies must still be prepared separately. For a combined bridge build, see [xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros).
+Colcon installs the SDK; Python dependencies must still be prepared separately. For
+Colcon-installed SDKs, run the CLI with `python -m xr_media.cli` rather than the
+pip-generated `xr_media` shortcut. For a combined bridge build, see
+[xr_media_ros](https://github.com/AgilexOpensource/xr_media_ros).
 
 ### Use uv (optional)
 
