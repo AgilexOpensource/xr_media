@@ -110,6 +110,26 @@ class XrMediaServerTest(unittest.TestCase):
             ):
                 self.assertEqual(static_dir(), assets)
 
+    def test_static_dir_finds_user_installed_assets_from_record(self):
+        with tempfile.TemporaryDirectory() as root:
+            userbase = Path(root) / "user"
+            assets = userbase / "share" / "xr_media" / "static"
+            assets.mkdir(parents=True)
+            (assets / "index.html").write_text("", encoding="utf-8")
+            site = userbase / "lib" / "python3" / "site-packages"
+            site.mkdir(parents=True)
+            entry = MagicMock()
+            entry.as_posix.return_value = "../../../share/xr_media/static/index.html"
+            entry.locate.return_value = site / "../../../share/xr_media/static/index.html"
+            dist = MagicMock(files=[entry])
+            with (
+                patch.dict("sys.modules", {"ament_index_python.packages": None}),
+                patch("xr_media.paths.__file__", str(site / "xr_media/paths.py")),
+                patch("xr_media.paths.sys.prefix", str(Path(root) / "usr")),
+                patch("importlib.metadata.distribution", return_value=dist),
+            ):
+                self.assertEqual(static_dir(), assets)
+
     def test_trigger_boolean_is_not_inferred_from_analog_value(self):
         released = HandInput.from_mapping(
             {"trigger_pressed": False, "trigger_analog": 0.1}

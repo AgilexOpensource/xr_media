@@ -18,6 +18,18 @@ def static_dir() -> Path:
     installed = Path(sys.prefix) / "share" / "xr_media" / "static"
     if installed.is_dir():
         return installed
+    # pip --user or sudo pip installs data files under a different prefix
+    # (~/.local, /usr/local); the wheel RECORD knows where they went.
+    try:
+        from importlib.metadata import PackageNotFoundError, distribution
+
+        for entry in distribution("xr_media").files or ():
+            if entry.as_posix().endswith("share/xr_media/static/index.html"):
+                installed = Path(entry.locate()).resolve().parent
+                if installed.is_dir():
+                    return installed
+    except PackageNotFoundError:
+        pass
     return source
 
 
