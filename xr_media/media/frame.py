@@ -4,6 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Sequence, Tuple
 
+# "" keeps the libx264 default ("medium").
+X264_PRESETS = (
+    "", "ultrafast", "superfast", "veryfast", "faster", "fast",
+    "medium", "slow", "slower", "veryslow",
+)
+
 
 @dataclass(frozen=True)
 class VideoFrame:
@@ -65,6 +71,9 @@ class MediaServerConfig:
     video_bitrate_min: int = 1_000_000
     video_bitrate_default: int = 3_000_000
     video_bitrate_max: int = 6_000_000
+    # libx264 options, process-wide like the bitrates. threads=0 means automatic.
+    video_x264_preset: str = "ultrafast"
+    video_x264_threads: int = 1
 
     def __post_init__(self) -> None:
         if not 1 <= int(self.port) <= 65535:
@@ -75,6 +84,11 @@ class MediaServerConfig:
             raise ValueError("max_clients must be positive")
         if self.codec.lower() not in {"h264", "vp8", "vp9"}:
             raise ValueError("codec must be h264, vp8 or vp9")
+        if self.video_x264_preset not in X264_PRESETS:
+            raise ValueError("video_x264_preset must be one of: %s" % ", ".join(
+                repr(name) for name in X264_PRESETS))
+        if int(self.video_x264_threads) < 0:
+            raise ValueError("video_x264_threads must be >= 0")
 
 
 @dataclass(frozen=True)
