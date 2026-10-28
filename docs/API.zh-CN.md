@@ -122,9 +122,13 @@ finally:
 | `video_bitrate_max` | `6_000_000` | 最高视频码率，bit/s |
 | `video_x264_preset` | `"ultrafast"` | H.264 的 libx264 preset：`ultrafast` … `veryslow`；`""` 保留 x264 默认值（`medium`） |
 | `video_x264_threads` | `1` | libx264 编码线程数；`0` 表示自动 |
+| `video_jitter_buffer_target_ms` | `None` | 内置页面为每个浏览器视频接收端设置的 `jitterBufferTarget`，`0`–`4000`；`None` 保留浏览器默认值 |
 
 码率满足 `100000 <= min <= default <= max`。码率和 x264 选项都会影响同进程的所有编码器。端口、码率、客户端上限、编码类型或 x264 选项不合法时抛出 `ValueError`。
 默认的 `ultrafast` + 单线程可缩短编码时间、让帧间隔更稳定；在 PICO 4 Ultra 上 640x480 实测端到端延迟降低约 20 ms。1080p 等更高分辨率下，如单线程编码跟不上帧率，可设 `video_x264_threads=0`。
+
+`video_jitter_buffer_target_ms` 默认不生效。在 PICO 4 Ultra（Chrome 125）上，设为 `0` 相比浏览器默认中位延迟反而增加约 6 ms（640x480）和 16 ms（1280x720），设置前请在目标头盔上实测。
+
 服务不会生成证书；先手动执行 `xr_media --init-certs`。证书或私钥文件不存在时，当前实现使用 HTTP。
 
 ### 启动和停止

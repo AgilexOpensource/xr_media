@@ -549,6 +549,9 @@ class MediaServer:
                 {key: value for key, value in item.items() if key != "control"}
                 for item in self._browser_inputs.values()
             ],
+            "client": {
+                "video_jitter_buffer_target_ms": self.config.video_jitter_buffer_target_ms,
+            },
         })
 
     def _store_input_video_frame(self, stream_id: str, frame: VideoFrame) -> bool:

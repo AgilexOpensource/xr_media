@@ -74,6 +74,8 @@ class MediaServerConfig:
     # libx264 options, process-wide like the bitrates. threads=0 means automatic.
     video_x264_preset: str = "ultrafast"
     video_x264_threads: int = 1
+    # Browser receiver jitterBufferTarget for video, ms. None keeps the browser default.
+    video_jitter_buffer_target_ms: Optional[int] = None
 
     def __post_init__(self) -> None:
         if not 1 <= int(self.port) <= 65535:
@@ -89,6 +91,9 @@ class MediaServerConfig:
                 repr(name) for name in X264_PRESETS))
         if int(self.video_x264_threads) < 0:
             raise ValueError("video_x264_threads must be >= 0")
+        target = self.video_jitter_buffer_target_ms
+        if target is not None and not 0 <= int(target) <= 4000:
+            raise ValueError("video_jitter_buffer_target_ms must be None or between 0 and 4000")
 
 
 @dataclass(frozen=True)

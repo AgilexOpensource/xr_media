@@ -870,6 +870,15 @@
     }));
   }
 
+  // Lower targets cut playout delay at the cost of more stutter on jittery links.
+  function applyJitterBufferTarget(receiver, targetMs) {
+    if (!Number.isFinite(targetMs)) return;
+    try {
+      if ("jitterBufferTarget" in receiver) receiver.jitterBufferTarget = targetMs;
+      else if ("playoutDelayHint" in receiver) receiver.playoutDelayHint = targetMs / 1000;
+    } catch (_) {}
+  }
+
   let connecting = false;
 
   async function enterWorkspace() {
@@ -975,6 +984,7 @@
         else {
           item.track = event.track;
           item.receiver = event.receiver;
+          applyJitterBufferTarget(event.receiver, payload.client?.video_jitter_buffer_target_ms);
           item.video.srcObject = new MediaStream([event.track]);
           item.video.play().catch(() => {});
           renderVideo(item);
