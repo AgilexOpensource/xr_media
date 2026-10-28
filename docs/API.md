@@ -120,8 +120,11 @@ finally:
 | `video_bitrate_min` | `1_000_000` | Minimum video bitrate, bit/s |
 | `video_bitrate_default` | `3_000_000` | Initial video bitrate, bit/s |
 | `video_bitrate_max` | `6_000_000` | Maximum video bitrate, bit/s |
+| `video_x264_preset` | `"ultrafast"` | libx264 preset for H.264: `ultrafast` … `veryslow`; `""` keeps the x264 default (`medium`) |
+| `video_x264_threads` | `1` | libx264 encoder threads; `0` means automatic |
 
-Bitrates must satisfy `100000 <= min <= default <= max` and affect encoders in the same process. Invalid port, bitrate, client limit or codec values raise `ValueError`.
+Bitrates must satisfy `100000 <= min <= default <= max`. Bitrates and x264 options affect all encoders in the same process. Invalid port, bitrate, client limit, codec or x264 values raise `ValueError`.
+The default `ultrafast` + 1 thread lowers encode time and gives steadier frame pacing; on a PICO 4 Ultra at 640x480 it cut end-to-end latency by about 20 ms. At higher resolutions such as 1080p, consider `video_x264_threads=0` if single-thread encoding cannot keep up with the frame rate.
 The server does not generate certificates; run `xr_media --init-certs` manually. The current implementation uses HTTP if either certificate file is missing.
 
 ### Start and stop

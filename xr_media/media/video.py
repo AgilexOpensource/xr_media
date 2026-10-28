@@ -16,6 +16,7 @@ from .buffer import LatestFrameBuffer
 from .frame import MediaServerConfig, VideoFrame
 from .media import MediaModule, PeerMediaContext, match_browser_input
 from .track import BufferedVideoTrack
+from .x264 import configure_x264
 
 log = logging.getLogger("xr_media.media.video")
 
@@ -44,6 +45,7 @@ class VideoModule(MediaModule):
             codec.MIN_BITRATE = config.video_bitrate_min
             codec.DEFAULT_BITRATE = config.video_bitrate_default
             codec.MAX_BITRATE = config.video_bitrate_max
+        configure_x264(config.video_x264_preset, config.video_x264_threads)
         self.on_frame_sent = on_frame_sent
         self.streams: Dict[str, _StreamState] = {}
         self.lock = threading.RLock()

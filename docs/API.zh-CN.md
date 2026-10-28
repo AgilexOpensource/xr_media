@@ -120,8 +120,11 @@ finally:
 | `video_bitrate_min` | `1_000_000` | 最低视频码率，bit/s |
 | `video_bitrate_default` | `3_000_000` | 初始视频码率，bit/s |
 | `video_bitrate_max` | `6_000_000` | 最高视频码率，bit/s |
+| `video_x264_preset` | `"ultrafast"` | H.264 的 libx264 preset：`ultrafast` … `veryslow`；`""` 保留 x264 默认值（`medium`） |
+| `video_x264_threads` | `1` | libx264 编码线程数；`0` 表示自动 |
 
-码率满足 `100000 <= min <= default <= max`，会影响同进程编码器。端口、码率、客户端上限或编码类型不合法时抛出 `ValueError`。
+码率满足 `100000 <= min <= default <= max`。码率和 x264 选项都会影响同进程的所有编码器。端口、码率、客户端上限、编码类型或 x264 选项不合法时抛出 `ValueError`。
+默认的 `ultrafast` + 单线程可缩短编码时间、让帧间隔更稳定；在 PICO 4 Ultra 上 640x480 实测端到端延迟降低约 20 ms。1080p 等更高分辨率下，如单线程编码跟不上帧率，可设 `video_x264_threads=0`。
 服务不会生成证书；先手动执行 `xr_media --init-certs`。证书或私钥文件不存在时，当前实现使用 HTTP。
 
 ### 启动和停止
