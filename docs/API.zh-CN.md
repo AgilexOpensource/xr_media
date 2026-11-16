@@ -25,6 +25,7 @@
 | 浏览器视频／音频 → Python | `register_browser_input()` + `add_video_listener()` / `add_audio_listener()` |
 | Python 视频／音频 → 浏览器 | `register_video_stream()` / `register_audio_stream()` + `push_video_frame()` / `push_audio_frame()` |
 | 获取 XR | `on_xr(sample)` 或 `latest_xr` |
+| 手柄震动 | `send_haptic(side, intensity, duration_ms)` |
 
 以上类型均可从 `xr_media` 导入。`XrMediaServer` 继承全部 `MediaServer` 接口。
 注册卡片和监听器后再启动；新增卡片后，已连接页面需重新连接以重新协商。
@@ -316,6 +317,10 @@ server.set_stream_playback("movie", position=12.0, duration=60.0,
 `hmd` 为 `RigidPose`，`left/right` 为 `TrackedHand`。`joints` 是关节名称到 `RigidPose` 的字典，可能为空。使用姿态前检查对应跟踪标志。`t_ms` 是客户端样本时间（毫秒），不保证与 PC 时钟同步。
 
 浏览器将 WebXR 位姿转换为 Z-up。手部捏合映射到 `trigger_pressed` 和 `trigger_analog`。`source_type` 用于区分输入来源，例如 `controller`、`hand`、`none`。
+
+### 手柄震动
+
+`send_haptic(side, intensity, duration_ms)` 让已连接 XR 客户端的 `"left"` 或 `"right"` 手柄震动，启动后可在任意线程调用。`intensity` 截断到 0–1，`duration_ms` 截断到 0–5000；新的震动会覆盖仍在进行的震动。没有 XR 客户端连接时返回 `False`；`side` 不合法或数值非有限时抛出 `ValueError`。投递为尽力而为：页面调用 `XRInputSource.gamepad.hapticActuators[0].pulse()`（或 `vibrationActuator`），跳过手势追踪；每侧每种调用方式通过 `/api/xr/event` 上报一次：`haptic`（所用方式及浏览器返回值）；没有震动器，或浏览器返回 `not-supported` / `invalid-parameter` 时为 `haptic-unavailable`。已验证 Quest 3 浏览器、PICO 4 Ultra 的 PICO 浏览器 4.0.38（VR 与透视）和 Wolvic 1.10。PICO 浏览器曾有一整次会话返回 `not-supported` 且不震，之后又恢复正常，原因不明，遇到时可尝试重新打开浏览器。Wolvic 1.10 及更早版本把 Gecko 以秒为单位的震动时长当作毫秒，页面只对这些版本把时长乘以 1000。PICO 上新的震动不会打断正在进行的震动。
 
 解析辅助方法：`RigidPose.from_mapping(data)`、`HandInput.from_mapping(data)`、`TrackedHand.from_mapping(data)` 和 `XrSample.from_json(payload)`。最后一个接收已解析的字典，不是 JSON 字符串；解析缺省值不代表跟踪有效。
 

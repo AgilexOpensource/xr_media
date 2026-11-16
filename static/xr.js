@@ -272,6 +272,8 @@ function openSocket() {
       } else if (message.op === "session.busy") {
         denied = true;
         reject(new Error(message.message));
+      } else if (message.op === "xr.haptic") {
+        pulseController(message.side, message.intensity, message.duration_ms);
       }
     });
     connection.addEventListener("error", () => reject(new Error("XR connection failed")));
@@ -289,6 +291,53 @@ function openSocket() {
     });
   });
 }
+const hapticReported = new Set();
+function reportHaptic(side, path, source, error, result) {
+  const key = `${side}:${path}:${error ? "error" : "ok"}`;
+  if (hapticReported.has(key)) return;
+  hapticReported.add(key);
+  const gamepad = source?.gamepad;
+  reportPhase(path === "none" || error ? "haptic-unavailable" : "haptic", {
+    side, path, result:result === undefined ? undefined : String(result), error:error ? String(error?.message || error) : undefined,
+    gamepad:Boolean(gamepad), actuators:gamepad?.hapticActuators?.length ?? null,
+    vibration:Boolean(gamepad?.vibrationActuator), effects:gamepad?.vibrationActuator?.effects ?? null,
+  });
+}
+// Wolvic <= 1.10 takes Gecko's pulse duration, which is in seconds, as milliseconds, so pulses are
+// 1000x too short to feel; scale it back. Only versions verified to have the bug are scaled: once fixed,
+// a scaled pulse would run 1000x too long, and the PICO runtime does not cut a running pulse short.
+const WOLVIC_HAPTIC_SCALE = (() => {
+  const match = /\bWolvic\/(\d+)\.(\d+)/.exec(navigator.userAgent);
+  return match && (Number(match[1]) < 1 || (Number(match[1]) === 1 && Number(match[2]) <= 10)) ? 1000 : 1;
+})();
+function pulseController(side, intensity, durationMs) {
+  if (!session) return;
+  let controller = null;
+  for (const source of session.inputSources) {
+    if (source.handedness !== side || source.hand) continue;
+    controller = source;
+    const actuator = source.gamepad?.hapticActuators?.[0];
+    if (actuator?.pulse) {
+      actuator.pulse(intensity, durationMs * WOLVIC_HAPTIC_SCALE).then(
+        (result) => reportHaptic(side, "pulse", source, hapticFailure(result), result),
+        (error) => reportHaptic(side, "pulse", source, error ?? "rejected"));
+      return;
+    }
+    const vibration = source.gamepad?.vibrationActuator;
+    if (vibration?.playEffect) {
+      vibration.playEffect("dual-rumble", { duration:durationMs, strongMagnitude:intensity, weakMagnitude:intensity }).then(
+        (result) => reportHaptic(side, "dual-rumble", source, hapticFailure(result), result),
+        (error) => reportHaptic(side, "dual-rumble", source, error ?? "rejected"));
+      return;
+    }
+  }
+  reportHaptic(side, "none", controller);
+}
+// Chromium resolves (not rejects) with "not-supported"/"invalid-parameter" when nothing vibrates (PICO Browser).
+function hapticFailure(result) {
+  const text = String(result);
+  return text === "not-supported" || text === "invalid-parameter" ? text : undefined;
+}
 function reportError(phase, error) {
   const body = JSON.stringify({ phase, message:error?.message || String(error), stack:error?.stack || "" });
   fetch("/api/xr/error", { method:"POST", headers:{ "content-type":"application/json" }, body, keepalive:true }).catch(() => {});
@@ -298,7 +347,8 @@ function reportPhase(phase, details = {}) {
   fetch("/api/xr/event", { method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify({ phase, details }), keepalive:true }).catch(() => {});
 }
 function onFrame(_time, frame) {
-  if (!session) return;
+  // three.js also runs the loop from window.requestAnimationFrame without an XRFrame (seen in Wolvic).
+  if (!session || !frame) return;
   try {
     renderFrame(_time, frame);
   } catch (error) {

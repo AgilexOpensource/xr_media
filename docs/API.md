@@ -25,6 +25,7 @@ This reference covers the `xr_media` Python API. See the README for installation
 | Browser video/audio → Python | `register_browser_input()` + `add_video_listener()` / `add_audio_listener()` |
 | Python video/audio → browser | `register_video_stream()` / `register_audio_stream()` + `push_video_frame()` / `push_audio_frame()` |
 | Read XR | `on_xr(sample)` or `latest_xr` |
+| Controller vibration | `send_haptic(side, intensity, duration_ms)` |
 
 Import these types from `xr_media`. `XrMediaServer` inherits all `MediaServer` methods.
 Register cards and listeners before startup. Reconnect existing pages after adding cards to renegotiate streams.
@@ -316,6 +317,10 @@ The `XrMediaServer(on_xr=callback)` callback is `callback(sample: XrSample)`. Us
 `hmd` is a `RigidPose`; `left/right` are `TrackedHand` objects. `joints` maps joint names to `RigidPose` and may be empty. Check tracking flags before using poses. `t_ms` is the client sample time in milliseconds, not guaranteed to be synchronized with the PC clock.
 
 The browser converts WebXR poses to Z-up. Hand pinch maps to `trigger_pressed` and `trigger_analog`. `source_type` identifies the input source, such as `controller`, `hand` or `none`.
+
+### Controller vibration
+
+`send_haptic(side, intensity, duration_ms)` pulses the `"left"` or `"right"` controller of the connected XR client. It can be called from any thread after startup. `intensity` is clipped to 0–1 and `duration_ms` to 0–5000; a new pulse replaces one still running. It returns `False` when no XR client is connected and raises `ValueError` for another side or a non-finite value. Delivery is best effort: the page uses `XRInputSource.gamepad.hapticActuators[0].pulse()` (or `vibrationActuator`), skips hand tracking, and reports once per side and method through `/api/xr/event`: `haptic` with the method and the browser's result, or `haptic-unavailable` when there is no actuator or the browser answers `not-supported` / `invalid-parameter`. Verified on Quest 3 Browser, PICO 4 Ultra PICO Browser 4.0.38 (VR and passthrough) and Wolvic 1.10. PICO Browser once answered `not-supported` and stayed silent for a whole session before working again later; the cause is unknown, so try reopening the browser. Wolvic 1.10 and earlier treat Gecko's pulse duration, which is in seconds, as milliseconds; the page scales the duration by 1000 for those versions only. On PICO a new pulse does not cut a running one short.
 
 Parsing helpers: `RigidPose.from_mapping(data)`, `HandInput.from_mapping(data)`, `TrackedHand.from_mapping(data)` and `XrSample.from_json(payload)`. The last accepts a parsed dictionary, not a JSON string. Parsed defaults do not imply valid tracking.
 

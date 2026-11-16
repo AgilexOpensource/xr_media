@@ -91,6 +91,29 @@ class XrMediaServerTest(unittest.TestCase):
 
         asyncio.run(scenario())
 
+    def test_send_haptic_reaches_the_xr_client_from_another_thread(self):
+        async def scenario():
+            server = XrMediaServer()
+            self.assertFalse(server.send_haptic("left", 0.5, 50))   # not running
+            server._loop = asyncio.get_running_loop()
+            app = web.Application()
+            app.router.add_get("/xr-signal", server._xr_signal)
+            async with TestClient(TestServer(app)) as client:
+                self.assertFalse(server.send_haptic("left", 0.5, 50))   # no XR client
+                ws = await client.ws_connect("/xr-signal")
+                self.assertEqual((await ws.receive_json(timeout=2))["op"], "session.config")
+                sent = await asyncio.to_thread(server.send_haptic, "right", 1.5, 9000)
+                self.assertTrue(sent)
+                self.assertEqual(await ws.receive_json(timeout=2), {
+                    "op": "xr.haptic", "side": "right", "intensity": 1.0, "duration_ms": 5000.0,
+                })
+                with self.assertRaises(ValueError):
+                    server.send_haptic("both", 0.5, 50)
+                with self.assertRaises(ValueError):
+                    server.send_haptic("left", float("nan"), 50)
+                await ws.close()
+        asyncio.run(scenario())
+
     def test_tls_dir_uses_xdg_config_home(self):
         with tempfile.TemporaryDirectory() as root:
             with unittest.mock.patch.dict(

@@ -5,6 +5,7 @@ from contextlib import suppress
 from dataclasses import asdict
 import json
 import logging
+import math
 import threading
 from typing import Callable, Optional, Set
 
@@ -15,7 +16,8 @@ from .xr import XrSample
 
 log = logging.getLogger("xr_media.server")
 OnXrSample = Callable[[XrSample], None]
-ASSET_VERSION = "20260923-admission"
+ASSET_VERSION = "20261116-haptic5"
+MAX_HAPTIC_MS = 5000.0
 
 
 class XrMediaServer(MediaServer):
@@ -50,6 +52,35 @@ class XrMediaServer(MediaServer):
             "xr_server_dispatched": self._xr_dispatched,
             "xr_server_replaced": self._xr_replaced,
         }
+
+    def send_haptic(self, side: str, intensity: float, duration_ms: float) -> bool:
+        """Pulse the ``"left"`` or ``"right"`` controller of the XR client; callable from any thread.
+
+        ``intensity`` is clipped to [0, 1] and ``duration_ms`` to [0, 5000]. Returns False when no XR
+        client is connected; delivery and device support are best effort.
+        """
+        if side not in ("left", "right"):
+            raise ValueError("side must be 'left' or 'right'")
+        intensity, duration_ms = float(intensity), float(duration_ms)
+        if not (math.isfinite(intensity) and math.isfinite(duration_ms)):
+            raise ValueError("intensity and duration_ms must be finite")
+        message = {
+            "op": "xr.haptic", "side": side,
+            "intensity": min(max(intensity, 0.0), 1.0),
+            "duration_ms": min(max(duration_ms, 0.0), MAX_HAPTIC_MS),
+        }
+        loop = self._loop
+        if loop is None or not loop.is_running() or not self._xr_peers:
+            return False
+        asyncio.run_coroutine_threadsafe(self._send_xr(message), loop)
+        return True
+
+    async def _send_xr(self, message: dict) -> None:
+        for ws in list(self._xr_peers):
+            if ws.closed:
+                continue
+            with suppress(ConnectionError, RuntimeError):
+                await ws.send_json(message)
 
     def configure_app(self, app: web.Application) -> None:
         app.router.add_get("/xr-signal", self._xr_signal)
