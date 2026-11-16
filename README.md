@@ -1,6 +1,6 @@
 # xr_media
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[中文](README.zh-CN.md)
 
 Python SDK for multi-stream bidirectional audio/video, image panels in XR, and XR input data.
 

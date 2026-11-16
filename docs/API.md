@@ -1,6 +1,6 @@
 # SDK API reference
 
-[English](API.md) | [简体中文](API.zh-CN.md) · [Back to README](../README.md)
+[中文](API.zh-CN.md) · [Back to README](../README.md)
 
 This reference covers the `xr_media` Python API. See the README for installation, certificates and startup.
 

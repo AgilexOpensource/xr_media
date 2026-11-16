@@ -1,6 +1,6 @@
 # SDK API 参考
 
-[English](API.md) | [简体中文](API.zh-CN.md) · [返回首页](../README.zh-CN.md)
+[English](API.md) · [返回首页](../README.zh-CN.md)
 
 本文描述 `xr_media` 的 Python 接口。首次安装、证书和启动步骤见首页。
 

@@ -1,6 +1,6 @@
 # xr_media
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.md)
 
 支持多路双向音视频、XR 图像投放与交互数据回传的 Python SDK。
 
