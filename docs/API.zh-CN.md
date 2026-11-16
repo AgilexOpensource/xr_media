@@ -320,7 +320,20 @@ server.set_stream_playback("movie", position=12.0, duration=60.0,
 
 ### 手柄震动
 
-`send_haptic(side, intensity, duration_ms)` 让已连接 XR 客户端的 `"left"` 或 `"right"` 手柄震动，启动后可在任意线程调用。`intensity` 截断到 0–1，`duration_ms` 截断到 0–5000；新的震动会覆盖仍在进行的震动。没有 XR 客户端连接时返回 `False`；`side` 不合法或数值非有限时抛出 `ValueError`。投递为尽力而为：页面调用 `XRInputSource.gamepad.hapticActuators[0].pulse()`（或 `vibrationActuator`），跳过手势追踪；每侧每种调用方式通过 `/api/xr/event` 上报一次：`haptic`（所用方式及浏览器返回值）；没有震动器，或浏览器返回 `not-supported` / `invalid-parameter` 时为 `haptic-unavailable`。已验证 Quest 3 浏览器、PICO 4 Ultra 的 PICO 浏览器 4.0.38（VR 与透视）和 Wolvic 1.10。PICO 浏览器曾有一整次会话返回 `not-supported` 且不震，之后又恢复正常，原因不明，遇到时可尝试重新打开浏览器。Wolvic 1.10 及更早版本把 Gecko 以秒为单位的震动时长当作毫秒，页面只对这些版本把时长乘以 1000。PICO 上新的震动不会打断正在进行的震动。
+`send_haptic(side, intensity, duration_ms)` 让已连接 XR 客户端的 `"left"` 或 `"right"` 手柄震动，启动后可在任意线程调用。
+
+- `intensity` 截断到 0–1，`duration_ms` 截断到 0–5000。
+- 没有 XR 客户端连接时返回 `False`；`side` 不合法或数值非有限时抛出 `ValueError`。
+- 投递为尽力而为：页面调用 `XRInputSource.gamepad.hapticActuators[0].pulse()`，没有该接口时改用 `vibrationActuator`。手势追踪没有震动器。
+- 页面每侧通过 `/api/xr/event` 上报一次：`haptic`（附浏览器返回值）；没有震动器，或浏览器返回 `not-supported` / `invalid-parameter` 时为 `haptic-unavailable`。
+
+已验证的浏览器：
+
+| 浏览器 | 说明 |
+|---|---|
+| Quest 3 浏览器 | 新的震动会覆盖仍在进行的震动。 |
+| PICO 浏览器（PICO 4 Ultra） | VR 与透视模式均可用。新的震动不会打断正在进行的震动。页面上报 `not-supported` 时，先确认头显设置里已开启手柄震动，再重新打开浏览器。 |
+| Wolvic 1.10 | Wolvic 1.10 及更早版本把 Gecko 以秒为单位的震动时长当作毫秒，页面只对这些版本把时长乘以 1000。 |
 
 解析辅助方法：`RigidPose.from_mapping(data)`、`HandInput.from_mapping(data)`、`TrackedHand.from_mapping(data)` 和 `XrSample.from_json(payload)`。最后一个接收已解析的字典，不是 JSON 字符串；解析缺省值不代表跟踪有效。
 
