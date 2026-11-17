@@ -1,6 +1,7 @@
 """Tracking sample types exchanged between headset browser and host."""
 
 from dataclasses import dataclass, field
+import math
 from typing import Any, Dict, Mapping, Optional
 
 
@@ -9,6 +10,12 @@ def _f(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _finite(value: Any, default: float = 0.0) -> float:
+    """Like _f, but NaN and infinities also fall back to ``default``."""
+    result = _f(value, default)
+    return result if math.isfinite(result) else default
 
 
 def _b(value: Any) -> bool:
@@ -39,6 +46,13 @@ class RigidPose:
     qy: float = 0.0
     qz: float = 0.0
     qw: float = 1.0
+
+    @property
+    def valid(self) -> bool:
+        """True when every value is finite and the quaternion has a usable length."""
+        values = (self.px, self.py, self.pz, self.qx, self.qy, self.qz, self.qw)
+        return all(math.isfinite(v) for v in values) and (
+            self.qx * self.qx + self.qy * self.qy + self.qz * self.qz + self.qw * self.qw) > 1e-12
 
     @classmethod
     def from_mapping(cls, data: Optional[Mapping[str, Any]]) -> "RigidPose":
@@ -87,8 +101,8 @@ class HandInput:
     def from_mapping(cls, data: Optional[Mapping[str, Any]]) -> "HandInput":
         if not data:
             return cls()
-        trigger = _f(data.get("trigger_analog"))
-        grip = _f(data.get("grip_analog"))
+        trigger = _finite(data.get("trigger_analog"))
+        grip = _finite(data.get("grip_analog"))
         return cls(
             trigger_pressed=_b(data.get("trigger_pressed")),
             grip_pressed=_b(data.get("grip_pressed")),
@@ -97,8 +111,8 @@ class HandInput:
             face_secondary=_b(data.get("face_secondary")),
             trigger_analog=trigger,
             grip_analog=grip,
-            stick_x=_f(data.get("stick_x")),
-            stick_y=_f(data.get("stick_y")),
+            stick_x=_finite(data.get("stick_x")),
+            stick_y=_finite(data.get("stick_y")),
         )
 
 
@@ -112,19 +126,25 @@ class TrackedHand:
 
     @classmethod
     def from_mapping(cls, data: Optional[Mapping[str, Any]]) -> "TrackedHand":
+        """Parse a browser hand dict; an empty dict is untracked, a missing ``tracked`` key means tracked.
+
+        A non-finite or degenerate pose is reported as untracked; such hand joints are dropped.
+        """
         if not data:
             return cls()
         joints_raw = data.get("joints") or {}
+        pose = RigidPose.from_mapping(data)
+        joints = {
+            str(name): RigidPose.from_mapping(joint)
+            for name, joint in joints_raw.items()
+            if isinstance(joint, Mapping)
+        }
         return cls(
-            pose=RigidPose.from_mapping(data),
+            pose=pose,
             input=HandInput.from_mapping(data.get("input")),
-            tracked=bool(data.get("tracked", True)),
+            tracked=bool(data.get("tracked", True)) and pose.valid,
             source_type=str(data.get("source_type") or "controller"),
-            joints={
-                str(name): RigidPose.from_mapping(pose)
-                for name, pose in joints_raw.items()
-                if isinstance(pose, Mapping)
-            },
+            joints={name: joint for name, joint in joints.items() if joint.valid},
         )
 
 
@@ -143,14 +163,18 @@ class XrSample:
     @classmethod
     def from_json(cls, payload: Mapping[str, Any]) -> "XrSample":
         hmd_raw = payload.get("hmd") or {}
+        hmd = RigidPose.from_mapping(hmd_raw)
+        t_ms = payload.get("t_ms") or 0
+        if isinstance(t_ms, float) and not math.isfinite(t_ms):
+            raise ValueError("non-finite t_ms")
         return cls(
-            t_ms=int(payload.get("t_ms") or 0),
+            t_ms=int(t_ms),
             headset_id=str(payload.get("headset_id") or "headset"),
-            hmd=RigidPose.from_mapping(hmd_raw),
+            hmd=hmd,
             left=TrackedHand.from_mapping(payload.get("left")),
             right=TrackedHand.from_mapping(payload.get("right")),
             hmd_tracked=bool(
                 payload.get("hmd_tracked", isinstance(hmd_raw.get("position"), Mapping))
-            ),
+            ) and hmd.valid,
             passthrough=_b(payload.get("passthrough")),
         )

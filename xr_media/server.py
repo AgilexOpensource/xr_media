@@ -176,11 +176,25 @@ class XrMediaServer(MediaServer):
         pending_samples = asyncio.Queue(maxsize=5)
 
         async def dispatch_all() -> None:
+            last_error_log = None
+            suppressed = 0
             while True:
                 sample = await pending_samples.get()
                 if self.on_xr is not None:
                     self._xr_dispatched += 1
-                    await asyncio.to_thread(self.on_xr, sample)
+                    try:
+                        await asyncio.to_thread(self.on_xr, sample)
+                    except Exception:
+                        # One bad sample must not stop forwarding for the rest of the session.
+                        # A handler failing on every sample would log at the XR rate, so throttle.
+                        now = time.monotonic()
+                        if last_error_log is not None and now - last_error_log < _XR_ERROR_LOG_PERIOD_S:
+                            suppressed += 1
+                            continue
+                        log.exception(
+                            "XR sample handler failed (%d similar failures suppressed)", suppressed,
+                        )
+                        last_error_log, suppressed = now, 0
 
         dispatcher = asyncio.create_task(dispatch_all())
         try:

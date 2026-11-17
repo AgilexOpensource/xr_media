@@ -115,6 +115,40 @@ class XrMediaServerTest(unittest.TestCase):
 
         asyncio.run(scenario())
 
+    def test_xr_handler_exception_does_not_stop_later_samples(self):
+        received = []
+
+        def on_xr(sample):
+            received.append(sample.t_ms)
+            if sample.t_ms <= 3:
+                raise RuntimeError("publish failed")
+
+        async def scenario():
+            server = XrMediaServer(on_xr=on_xr)
+            app = web.Application()
+            app.router.add_get("/xr-signal", server._xr_signal)
+            async with TestClient(TestServer(app)) as client:
+                ws = await client.ws_connect("/xr-signal")
+                self.assertEqual((await ws.receive_json(timeout=2))["op"], "session.config")
+                with self.assertLogs("xr_media.server", level="ERROR") as logs:
+                    await ws.send_json({"op": "xr.sample", "t_ms": 1})
+                    for _ in range(200):
+                        if logs.records:
+                            break
+                        await asyncio.sleep(0.01)
+                # Repeated failures inside the throttle period are counted, not logged.
+                with patch("xr_media.server.log.exception") as repeated:
+                    for t_ms in (2, 3, 4):
+                        await ws.send_json({"op": "xr.sample", "t_ms": t_ms})
+                    for _ in range(100):
+                        if received == [1, 2, 3, 4]:
+                            break
+                        await asyncio.sleep(0.01)
+                self.assertEqual(received, [1, 2, 3, 4])
+                repeated.assert_not_called()
+                await ws.close()
+        asyncio.run(scenario())
+
     def test_send_haptic_reaches_the_xr_client_from_another_thread(self):
         async def scenario():
             server = XrMediaServer()
