@@ -405,13 +405,13 @@
       return;
     }
     if (item.stream) await stopInput(item);
-    if (ws?.readyState !== WebSocket.OPEN) throw new Error("上行连接尚未建立，请重新连接");
+    if (ws?.readyState !== WebSocket.OPEN) throw new Error("Uplink connection is not ready; please reconnect");
     item.start.disabled = true;
     try {
       await new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           item.claimResult = null;
-          reject(new Error("申请上行卡片超时，请重试"));
+          reject(new Error("Timed out claiming the uplink card; please retry"));
         }, 5000);
         item.claimResult = (message) => {
           clearTimeout(timer);
@@ -419,7 +419,7 @@
           if (message.ok) resolve();
           else {
             const owner = message.client || {};
-            reject(new Error(`${item.info.media_type === "video" ? "视频" : "音频"}上行已被 ${owner.id || "其他客户端"}（${owner.browser || "Browser"}）占用，请等待其停止或离线后重试`));
+            reject(new Error(`${item.info.media_type === "video" ? "Video" : "Audio"} uplink is in use by ${owner.id || "another client"} (${owner.browser || "Browser"}); retry after it stops or disconnects`));
           }
         };
         sendInputControl(item, "claim");
@@ -883,7 +883,7 @@
     document.querySelector(".corner-actions").hidden = true;
     document.body.dataset.admitted = "false";
     retry.disabled = true;
-    entry.querySelector("p").textContent = "正在申请进入…";
+    entry.querySelector("p").textContent = "Requesting access…";
     try {
       await connect();
       workspace.hidden = false;
@@ -911,24 +911,24 @@
     const signal = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/signal?admission=1`);
     ws = signal;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => finish(new Error("入场确认超时，请重试")), 10000);
+      const timer = setTimeout(() => finish(new Error("Timed out waiting for admission; please retry")), 10000);
       function finish(error) {
         clearTimeout(timer);
         signal.onmessage = signal.onerror = signal.onclose = null;
         if (error) { signal.close(); reject(error); }
         else resolve();
       }
-      signal.onerror = () => finish(new Error("连接失败，请检查网络后重试"));
-      signal.onclose = () => finish(new Error("连接已关闭，请重试"));
+      signal.onerror = () => finish(new Error("Connection failed; check the network and retry"));
+      signal.onclose = () => finish(new Error("Connection closed; please retry"));
       signal.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           if (message.type === "session.accepted") finish();
           else if (message.code === "capacity_full") {
             const users = message.clients.map((client) => `${client.id} (${client.browser})`).join("、");
-            finish(new Error(`当前在线 ${message.count}/${message.limit}，暂时无法进入。使用者：${users}。请等待有人离线后重试。`));
+            finish(new Error(`${message.count}/${message.limit} clients online; cannot join now. In use by: ${users}. Retry after someone disconnects.`));
           }
-        } catch (_) { finish(new Error("入场响应无效，请重试")); }
+        } catch (_) { finish(new Error("Invalid admission response; please retry")); }
       };
     });
   }
@@ -943,7 +943,7 @@
     setStatus("connecting");
     await requestAdmission();
     const response = await fetch("/api/streams", { cache: "no-store" });
-    if (!response.ok) throw new Error("加载卡片失败，请重试");
+    if (!response.ok) throw new Error("Failed to load cards; please retry");
     const payload = await response.json();
     const available = payload.streams
       .map((item, index) => ({ item, index }))
@@ -988,7 +988,7 @@
           const message = JSON.parse(event.data);
           if (message.type === "error" && message.code === "capacity_full") {
             const users = message.clients.map((client) => `${client.id} (${client.browser})`).join(", ");
-            const error = new Error(`连接已满 (${message.count}/${message.limit})：${users}`);
+            const error = new Error(`Connection limit reached (${message.count}/${message.limit}): ${users}`);
             answerReject?.(error);
             answerResolve = null;
             answerReject = null;
@@ -1013,7 +1013,7 @@
               if (message.code === "input_busy") {
                 if (message.action === "stop" || message.action === "ended") return;
                 const owner = message.client || {};
-                const error = `${item.info.media_type === "video" ? "视频" : "音频"}上行已被 ${owner.id || "其他客户端"}（${owner.browser || "Browser"}）占用`;
+                const error = `${item.info.media_type === "video" ? "Video" : "Audio"} uplink is in use by ${owner.id || "another client"} (${owner.browser || "Browser"})`;
                 if (message.action === "start") await stopInput(item);
                 setStatus(error);
                 showNotice(error);
@@ -1044,7 +1044,7 @@
           answerReject = null;
         }
     };
-    if (ws.readyState !== WebSocket.OPEN) throw new Error("连接已关闭，请重试");
+    if (ws.readyState !== WebSocket.OPEN) throw new Error("Connection closed; please retry");
     negotiation = Promise.resolve();
     await negotiate();
   }

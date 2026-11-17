@@ -4,8 +4,8 @@
   <meta name="theme-color" content="#081014" media="(prefers-color-scheme: dark)"><meta name="theme-color" content="#eef4f3" media="(prefers-color-scheme: light)"><title>XR Media</title><link rel="stylesheet" href="/static/app.css?v=20260923-11-admission-layout">
 </head><body>
   <div class="corner-actions" hidden><button id="connect" class="corner-action" type="button" title="Reconnect" aria-label="Reconnect">↻</button><button id="layout" class="corner-action" type="button" title="Reset layout" aria-label="Reset layout">▦</button><button id="fullscreen" class="corner-action" type="button" title="Enter fullscreen" aria-label="Enter fullscreen"><span class="fullscreen-glyph" aria-hidden="true"></span></button></div>
-  <dialog id="notice" aria-label="连接提示"><p></p><form method="dialog"><button>知道了</button></form></dialog>
-  <section id="entry" aria-live="polite"><h1>工作空间</h1><p>正在申请进入…</p><button type="button">重试进入</button></section>
+  <dialog id="notice" aria-label="Connection notice"><p></p><form method="dialog"><button>OK</button></form></dialog>
+  <section id="entry" aria-live="polite"><h1>Workspace</h1><p>Requesting access…</p><button type="button">Retry</button></section>
   <main id="workspace" hidden inert><div class="empty-state"><span></span><strong>Waiting for video streams</strong><small>Streams appear here as movable cards</small></div></main>
   <template id="audio-tile-template"><article class="tile audio-tile">
     <div class="tile-head"><button type="button" class="drag-handle collapse-toggle" title="Collapse card" aria-label="Collapse card" aria-expanded="true">⠿</button><span class="live-dot"></span><strong class="label"></strong>
@@ -34,5 +34,5 @@
     <video class="input-preview" playsinline muted></video><canvas class="input-waveform" width="640" height="180"></canvas><span class="waiting">select a source</span>
     <span class="controls-trigger input-playback-trigger" aria-hidden="true"></span><div class="file-controls input-playback-controls"><button class="input-start playback-icon" type="button" data-state="start" title="Start" aria-label="Start"></button><button class="input-stop playback-icon" type="button" title="Stop" aria-label="Stop" disabled></button><span class="input-time file-playback">0:00 / 0:00</span></div>
   </article></template>
-  <script src="/static/client.js?v=20260923-34-input-ownership"></script>
+  <script src="/static/client.js?v=20261117-35-english-ui"></script>
 </body></html>
