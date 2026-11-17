@@ -56,6 +56,7 @@ class RigidPose:
 
     @classmethod
     def from_mapping(cls, data: Optional[Mapping[str, Any]]) -> "RigidPose":
+        """Parse nested ``position``/``orientation`` dicts or flat ``px``/``x``... keys; missing values default."""
         if not data:
             return cls()
         pos = data.get("position")
@@ -99,6 +100,7 @@ class HandInput:
 
     @classmethod
     def from_mapping(cls, data: Optional[Mapping[str, Any]]) -> "HandInput":
+        """Parse a browser input dict; missing or invalid values use the field defaults."""
         if not data:
             return cls()
         trigger = _finite(data.get("trigger_analog"))
@@ -118,6 +120,10 @@ class HandInput:
 
 @dataclass
 class TrackedHand:
+    """One hand or controller: pose, buttons, tracking flag, source type and hand joints.
+
+    ``source_type`` is ``controller``, ``hand`` or ``none``.
+    """
     pose: RigidPose = field(default_factory=RigidPose)
     input: HandInput = field(default_factory=HandInput)
     tracked: bool = False
@@ -162,6 +168,7 @@ class XrSample:
 
     @classmethod
     def from_json(cls, payload: Mapping[str, Any]) -> "XrSample":
+        """Build a sample from a parsed JSON dict (not a string); defaults do not imply valid tracking."""
         hmd_raw = payload.get("hmd") or {}
         hmd = RigidPose.from_mapping(hmd_raw)
         t_ms = payload.get("t_ms") or 0

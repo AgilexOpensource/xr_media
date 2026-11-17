@@ -62,6 +62,7 @@ def _defer_mdns_candidates(
 
 
 def lan_ipv4_addresses() -> List[str]:
+    """Return the non-loopback IPv4 addresses of this host, without duplicates (may be empty)."""
     found: List[str] = []
     try:
         output = subprocess.check_output(
@@ -123,6 +124,7 @@ class MediaServer:
     def remove_audio_listener(
         self, callback: Callable[[str, AudioFrame], Any]
     ) -> None:
+        """Unregister a callback added with ``add_audio_listener``; raises ``ValueError`` if absent."""
         self.audio.remove_listener(callback)
 
     def add_video_listener(
@@ -134,6 +136,7 @@ class MediaServer:
     def remove_video_listener(
         self, callback: Callable[[str, VideoFrame], Any]
     ) -> None:
+        """Unregister a callback added with ``add_video_listener``; raises ``ValueError`` if absent."""
         self.video.remove_listener(callback)
 
     def register_browser_input(
@@ -166,6 +169,7 @@ class MediaServer:
     def register_audio_stream(
         self, stream_id: str, label: str = "", kind: str = "audio"
     ) -> None:
+        """Register a host-to-browser audio stream, or update its non-empty ``label`` and ``kind``."""
         self.audio.register_audio_stream(stream_id, label, kind)
 
     def push_audio_frame(
@@ -195,6 +199,10 @@ class MediaServer:
         kind: str = "",
         on_control: Optional[Callable[[str, Any], None]] = None,
     ) -> None:
+        """Register a host-to-browser video stream, or update its non-empty ``label``, ``kind`` and ``on_control``.
+
+        ``kind="file"`` shows file playback controls whose requests reach ``on_control(action, value)``.
+        """
         self.video.register_video_stream(
             stream_id, label, kind, on_control
         )
@@ -202,18 +210,26 @@ class MediaServer:
     def push_video_frame(
         self, frame: VideoFrame, stream_id: str = "main", label: str = ""
     ) -> None:
+        """Store ``frame`` as the latest frame of ``stream_id``, registering the stream if needed.
+
+        Only the newest frame is kept, so not every pushed frame reaches the browser.
+        """
         self.video.push_video_frame(frame, stream_id, label)
 
     def set_stream_status(self, stream_id: str, status: str) -> None:
+        """Set the status shown on a video card; raises ``ValueError`` or ``KeyError`` for a bad status or stream."""
         self.video.set_stream_status(stream_id, status)
 
     def set_stream_playback(self, stream_id: str, **values) -> None:
+        """Merge playback metadata such as ``position``, ``duration`` and ``paused`` into a video stream."""
         self.video.set_stream_playback(stream_id, **values)
 
     def list_streams(self) -> List[dict]:
+        """Return one dict per host-to-browser video stream with its status, size and frame counters."""
         return self.video.list_streams()
 
     def get_stats(self) -> MediaServerStats:
+        """Return a snapshot of peer, video and audio counters."""
         states, counts, snapshots = self.video.counts()
         received = sum(item[0] for item in counts)
         replaced = sum(item[1] for item in counts)
@@ -782,6 +798,7 @@ next();
         return web.FileResponse(self.asset_root() / "index.html")
 
     async def start(self) -> None:
+        """Start the HTTP(S) and signaling server in the running event loop; no-op when already started."""
         if self._runner is not None:
             return
         app = web.Application()
@@ -819,6 +836,7 @@ next();
             log.info("open in browser: %s", url)
 
     async def stop(self) -> None:
+        """Close signaling sockets, WebRTC peers and the HTTP server; timeouts are logged, not raised."""
         for stream_id in list(self._audio_players):
             self._set_input_speaker(stream_id, False)
         sockets = list(self._signal_peers)
@@ -866,6 +884,10 @@ next();
                 log.warning("timed out cleaning up HTTP server")
 
     def start_background(self, timeout: float = 10.0) -> None:
+        """Run the server on its own event-loop thread and wait up to ``timeout`` seconds for startup.
+
+        Raises ``TimeoutError`` when startup does not finish in time and ``RuntimeError`` when it fails.
+        """
         if self._thread and self._thread.is_alive():
             return
         self._started.clear()
@@ -900,6 +922,7 @@ next();
             raise RuntimeError("failed to start MediaServer") from self._start_error
 
     def stop_background(self, timeout: float = 4.0) -> None:
+        """Stop a server started with ``start_background`` and join its thread."""
         loop, thread = self._loop, self._thread
         if loop and loop.is_running():
             future = asyncio.run_coroutine_threadsafe(self.stop(), loop)

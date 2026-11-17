@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 def static_dir() -> Path:
+    """Return the web asset directory: the source tree, the ament share directory, or the pip data prefix."""
     source = Path(__file__).resolve().parent.parent / "static"
     if source.is_dir():
         return source

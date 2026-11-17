@@ -42,6 +42,11 @@ def _pad_to_even(frame: VideoFrame, array: np.ndarray) -> np.ndarray:
 
 
 class BufferedVideoTrack(VideoStreamTrack):
+    """WebRTC video track that sends each new frame of a ``LatestFrameBuffer`` once.
+
+    ``should_send`` returning False holds the stream (for paused or ended sources); ``on_sent`` is called per
+    frame sent.
+    """
     def __init__(
         self,
         frames: LatestFrameBuffer,
@@ -61,9 +66,11 @@ class BufferedVideoTrack(VideoStreamTrack):
         self._active.set()
 
     def pause(self) -> None:
+        """Block ``recv`` until ``resume`` is called."""
         self._active.clear()
 
     def resume(self) -> None:
+        """Let ``recv`` deliver frames again after ``pause``."""
         self._active.set()
 
     async def _next_timestamp(self, arrival_ns: Optional[int] = None):
@@ -89,6 +96,7 @@ class BufferedVideoTrack(VideoStreamTrack):
         return self._timestamp, Fraction(1, 90000)
 
     async def recv(self) -> AvVideoFrame:
+        """Wait for the next unsent buffered frame and return it as a timestamped ``av.VideoFrame``."""
         await self._active.wait()
         while self._last_frame is not None and not self._should_send():
             await asyncio.sleep(0.1)

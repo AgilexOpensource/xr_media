@@ -112,19 +112,23 @@ class AudioModule(MediaModule):
 
     @property
     def kind(self) -> str:
+        """Media kind handled by this module: ``"audio"``."""
         return "audio"
 
     def add_listener(self, callback: Callable[[str, AudioFrame], Any]) -> None:
+        """Register ``callback(stream_id, frame)`` for PCM received from browsers; sync or async."""
         if not callable(callback):
             raise TypeError("audio callback must be callable")
         self._listeners.append(callback)
 
     def remove_listener(self, callback: Callable[[str, AudioFrame], Any]) -> None:
+        """Unregister a listener; raises ``ValueError`` if absent."""
         self._listeners.remove(callback)
 
     def register_audio_stream(
         self, stream_id: str, label: str = "", kind: str = "audio"
     ) -> None:
+        """Register a host-to-browser audio stream, or update its non-empty ``label`` and ``kind``."""
         stream_id = str(stream_id).strip()
         valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
         if not stream_id or any(char not in valid for char in stream_id):
@@ -147,6 +151,7 @@ class AudioModule(MediaModule):
     def push(
         self, frame: AudioFrame, stream_id: str = "audio", label: str = ""
     ) -> None:
+        """Append a PCM block to ``stream_id`` for every browser peer, registering the stream if needed."""
         self.register_audio_stream(stream_id, label, kind="")
         with self._streams_lock:
             stream = self._streams[stream_id]
@@ -154,6 +159,7 @@ class AudioModule(MediaModule):
         stream.buffer.push(frame)
 
     def list_streams(self) -> List[dict]:
+        """Return one dict per host-to-browser audio stream with its status and counters."""
         with self._streams_lock:
             streams = list(self._streams.values())
         return [
@@ -171,6 +177,7 @@ class AudioModule(MediaModule):
         ]
 
     def attach(self, peer: RTCPeerConnection, context: PeerMediaContext) -> None:
+        """Add output tracks for the requested audio streams and consume incoming browser audio tracks."""
         tasks = self._tasks.setdefault(peer, set())
         incoming_index = 0
         with self._streams_lock:
@@ -206,6 +213,7 @@ class AudioModule(MediaModule):
             task.add_done_callback(tasks.discard)
 
     async def detach(self, peer: RTCPeerConnection) -> None:
+        """Cancel and await the receive tasks of ``peer``."""
         tasks = self._tasks.pop(peer, set())
         for task in tasks:
             task.cancel()

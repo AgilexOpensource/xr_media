@@ -18,6 +18,7 @@ from .paths import static_dir, tls_dir
 
 
 def parser() -> argparse.ArgumentParser:
+    """Build the ``xr_media`` command-line parser."""
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument(
         "--init-certs", action="store_true",
@@ -274,6 +275,7 @@ def _open_capture(source, options, args):
 
 
 def main(argv=None) -> int:
+    """Run the ``xr_media`` CLI with ``argv`` (default ``sys.argv``) and return the process exit code."""
     args = parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="[xr-media] %(message)s")
     if args.init_certs:

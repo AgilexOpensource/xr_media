@@ -6,6 +6,10 @@ import sys
 
 
 def require_dependencies(*packages):
+    """Import every ``(module, pip_package)`` pair; raise one ``ModuleNotFoundError`` for all missing ones.
+
+    The message includes the ``pip install`` command for the current interpreter.
+    """
     package_names = dict(packages)
     missing = []
     for module in package_names:

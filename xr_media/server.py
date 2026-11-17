@@ -48,10 +48,12 @@ class XrMediaServer(MediaServer):
 
     @property
     def latest_xr(self) -> Optional[XrSample]:
+        """Most recent XR sample, or ``None`` before the first one; it is kept after tracking stops."""
         with self._xr_lock:
             return self._latest_xr
 
     def get_xr_stats(self) -> dict:
+        """Return the counters ``xr_server_received``, ``xr_server_dispatched`` and ``xr_server_replaced``."""
         return {
             "xr_server_received": self._xr_received,
             "xr_server_dispatched": self._xr_dispatched,
@@ -88,6 +90,7 @@ class XrMediaServer(MediaServer):
                 await ws.send_json(message)
 
     def configure_app(self, app: web.Application) -> None:
+        """Add the XR signaling, state, client-report and asset routes."""
         app.router.add_get("/xr-signal", self._xr_signal)
         app.router.add_get("/api/xr/state", self._xr_state_response)
         app.router.add_post("/api/xr/error", self._client_error)
@@ -247,6 +250,7 @@ class XrMediaServer(MediaServer):
         return ws
 
     async def stop(self) -> None:
+        """Close XR WebSockets, then stop the media server."""
         peers = list(self._xr_peers)
         self._xr_peers.clear()
         if peers:

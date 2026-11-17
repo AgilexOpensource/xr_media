@@ -34,6 +34,7 @@ class _StreamState:
 
 
 class VideoModule(MediaModule):
+    """Send host video streams to browser peers and receive browser video tracks."""
     def __init__(
         self, config: MediaServerConfig, on_frame_sent: Callable[[], None]
     ) -> None:
@@ -54,14 +55,17 @@ class VideoModule(MediaModule):
 
     @property
     def kind(self) -> str:
+        """Media kind handled by this module: ``"video"``."""
         return "video"
 
     def add_listener(self, callback: Callable[[str, VideoFrame], Any]) -> None:
+        """Register ``callback(stream_id, frame)`` for video received from browsers; sync or async."""
         if not callable(callback):
             raise TypeError("video callback must be callable")
         self._listeners.append(callback)
 
     def remove_listener(self, callback: Callable[[str, VideoFrame], Any]) -> None:
+        """Unregister a listener; raises ``ValueError`` if absent."""
         self._listeners.remove(callback)
 
     def register_video_stream(
@@ -71,6 +75,7 @@ class VideoModule(MediaModule):
         kind: str = "",
         on_control: Optional[Callable[[str, Any], None]] = None,
     ) -> None:
+        """Register a host-to-browser video stream, or update its non-empty ``label``, ``kind``, ``on_control``."""
         stream_id = str(stream_id).strip()
         valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
         if not stream_id or any(char not in valid for char in stream_id):
@@ -97,6 +102,7 @@ class VideoModule(MediaModule):
     def push_video_frame(
         self, frame: VideoFrame, stream_id: str = "main", label: str = ""
     ) -> None:
+        """Store ``frame`` as the latest frame of ``stream_id`` and mark the stream live."""
         self.register_video_stream(stream_id, label)
         with self.lock:
             stream = self.streams[stream_id]
@@ -108,6 +114,7 @@ class VideoModule(MediaModule):
         stream.status = "live"
 
     def set_stream_status(self, stream_id: str, status: str) -> None:
+        """Set the status of a registered stream; raises ``ValueError`` or ``KeyError``."""
         if status not in {"waiting", "live", "paused", "seeking", "ended", "error"}:
             raise ValueError("invalid stream status: %s" % status)
         with self.lock:
@@ -116,6 +123,7 @@ class VideoModule(MediaModule):
             self.streams[stream_id].status = status
 
     def set_stream_playback(self, stream_id: str, **values) -> None:
+        """Merge playback metadata into a registered stream; raises ``KeyError`` if missing."""
         with self.lock:
             if stream_id not in self.streams:
                 raise KeyError(stream_id)
@@ -125,6 +133,7 @@ class VideoModule(MediaModule):
             stream.playback.update(values)
 
     def list_streams(self) -> List[dict]:
+        """Return one dict per stream with status, size, frame counters and capture rate."""
         with self.lock:
             states = list(self.streams.values())
         result = []
@@ -155,6 +164,7 @@ class VideoModule(MediaModule):
         return result
 
     def counts(self):
+        """Return ``(states, counts, latest_frames)`` for all streams, used for statistics."""
         with self.lock:
             states = list(self.streams.values())
         counts = [state.frames.counts() for state in states]
@@ -162,6 +172,7 @@ class VideoModule(MediaModule):
         return states, counts, snapshots
 
     def attach(self, peer: RTCPeerConnection, context: PeerMediaContext) -> None:
+        """Add output tracks for the requested streams, set codec preferences, consume browser video."""
         tasks = self._tasks.setdefault(peer, set())
         incoming_index = 0
         with self.lock:
@@ -212,6 +223,7 @@ class VideoModule(MediaModule):
             task.add_done_callback(tasks.discard)
 
     async def detach(self, peer: RTCPeerConnection) -> None:
+        """Cancel and await the receive tasks of ``peer``."""
         tasks = self._tasks.pop(peer, set())
         for task in tasks:
             task.cancel()

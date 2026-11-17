@@ -55,11 +55,16 @@ class AudioFrame:
 
     @property
     def samples(self) -> int:
+        """Number of PCM samples in ``data`` (320 samples = 20 ms at 16 kHz)."""
         return int(getattr(self.data, "size", len(self.data)))
 
 
 @dataclass(frozen=True)
 class MediaServerConfig:
+    """Immutable media server settings; invalid values raise ``ValueError``.
+
+    See ``docs/API.md`` section 2 for every field and its default.
+    """
     host: str = "0.0.0.0"
     port: int = 9443
     cert_path: Optional[Path] = None
@@ -93,6 +98,11 @@ class MediaServerConfig:
 
 @dataclass(frozen=True)
 class MediaServerStats:
+    """Counter snapshot returned by ``MediaServer.get_stats``.
+
+    ``clients`` counts media peers; ``frames_replaced`` counts pushes that replaced an earlier buffered frame,
+    not network loss.
+    """
     clients: int
     frames_received: int
     frames_replaced: int

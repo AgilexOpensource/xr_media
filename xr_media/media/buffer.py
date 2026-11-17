@@ -19,6 +19,7 @@ class LatestFrameBuffer:
         self.replaced = 0
 
     def push(self, frame: VideoFrame) -> int:
+        """Replace the stored frame with ``frame`` and return its sequence number."""
         with self._lock:
             self.received += 1
             if self._frame is not None:
@@ -29,6 +30,7 @@ class LatestFrameBuffer:
             return self._sequence
 
     def latest(self) -> Tuple[Optional[VideoFrame], int]:
+        """Return the newest frame (or ``None``) and its sequence number."""
         with self._lock:
             return self._frame, self._sequence
 
@@ -38,5 +40,6 @@ class LatestFrameBuffer:
             return self._frame, self._sequence, self._arrival_ns
 
     def counts(self) -> Tuple[int, int]:
+        """Return ``(received, replaced)``: frames pushed, and pushes that overwrote an earlier frame."""
         with self._lock:
             return self.received, self.replaced
