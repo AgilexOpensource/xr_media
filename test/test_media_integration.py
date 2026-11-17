@@ -3,6 +3,7 @@ import json
 import time
 import unittest
 from fractions import Fraction
+from unittest.mock import patch
 from pathlib import Path
 
 import numpy as np
@@ -38,8 +39,10 @@ if ClientSession is not None:
 
 
 @unittest.skipIf(ClientSession is None, "aiortc/aiohttp not installed")
+# The preview control opens a local browser tab; tests must never do that.
+@patch("xr_media.media.server.webbrowser.open", return_value=True)
 class WebRtcIntegrationTest(unittest.IsolatedAsyncioTestCase):
-    def test_planar_formats_convert_to_av_frames(self):
+    def test_planar_formats_convert_to_av_frames(self, _browser_open):
         from av import VideoFrame as AvVideoFrame
 
         for pixel_format, av_format in (("i420", "yuv420p"), ("nv12", "nv12")):
@@ -48,12 +51,12 @@ class WebRtcIntegrationTest(unittest.IsolatedAsyncioTestCase):
             frame = AvVideoFrame.from_ndarray(array, format=av_format)
             self.assertEqual((frame.width, frame.height), (4, 4))
 
-    def test_odd_decoded_dimensions_are_padded_without_cropping(self):
+    def test_odd_decoded_dimensions_are_padded_without_cropping(self, _browser_open):
         source = VideoFrame(np.zeros((49, 65, 3), dtype=np.uint8), 65, 49)
         padded = _pad_to_even(source, _as_ndarray(source))
         self.assertEqual(padded.shape, (50, 66, 3))
 
-    async def test_offer_answer_and_receive_frame(self):
+    async def test_offer_answer_and_receive_frame(self, browser_open):
         server = MediaServer(MediaServerConfig(
             host="127.0.0.1", port=19443,
             cert_path=Path("/tmp/webrtc-media-test-no-cert"),
@@ -190,6 +193,9 @@ class WebRtcIntegrationTest(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(controls, [("loop", True)])
                     self.assertEqual(
                         input_controls, [("start", "device"), ("preview", True)]
+                    )
+                    browser_open.assert_called_once_with(
+                        "http://localhost:19443/input-preview/browser_video"
                     )
                     self.assertEqual(
                         server._browser_inputs["browser_video"]["status"], "live"
