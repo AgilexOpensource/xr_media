@@ -176,7 +176,15 @@ class MediaServer:
 
     @property
     def page_urls(self) -> List[str]:
-        hosts = lan_ipv4_addresses() or ["localhost"]
+        """Page URLs, using ``https`` when both TLS files exist and ``http`` otherwise.
+
+        A wildcard listen address lists every LAN IPv4 address; a specific one lists only itself.
+        """
+        host = self.config.host.strip()
+        if host in ("", "0.0.0.0", "::"):
+            hosts = lan_ipv4_addresses() or ["localhost"]
+        else:
+            hosts = [f"[{host}]" if ":" in host else host]
         scheme = "https" if self._tls_paths() else "http"
         return [f"{scheme}://{host}:{self.config.port}/" for host in hosts]
 

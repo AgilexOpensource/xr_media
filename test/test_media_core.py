@@ -15,6 +15,14 @@ from xr_media.media.video import VideoModule
 
 
 class CoreTest(unittest.TestCase):
+    def test_page_urls_follow_the_listen_address(self):
+        with patch("xr_media.media.server.lan_ipv4_addresses", return_value=["10.0.0.5", "192.168.1.10"]), \
+                patch.object(MediaServer, "_tls_paths", return_value=None):
+            wildcard = MediaServer(MediaServerConfig(host="0.0.0.0", port=9443))
+            self.assertEqual(wildcard.page_urls, ["http://10.0.0.5:9443/", "http://192.168.1.10:9443/"])
+            nic = MediaServer(MediaServerConfig(host="192.168.1.10", port=9443))
+            self.assertEqual(nic.page_urls, ["http://192.168.1.10:9443/"])
+
     def test_typed_stream_api_preserves_kind_when_pushing(self):
         server = MediaServer()
         server.register_video_stream("movie", kind="file")
