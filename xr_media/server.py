@@ -7,7 +7,8 @@ import json
 import logging
 import math
 import threading
-from typing import Callable, Optional, Set
+import time
+from typing import Callable, Dict, Optional, Set
 
 from .media import MediaServer
 from aiohttp import WSMsgType, web
@@ -16,8 +17,10 @@ from .xr import XrSample
 
 log = logging.getLogger("xr_media.server")
 OnXrSample = Callable[[XrSample], None]
-ASSET_VERSION = "20261116-haptic5"
+ASSET_VERSION = "20261117-reconnect1"
 MAX_HAPTIC_MS = 5000.0
+_XR_ERROR_LOG_PERIOD_S = 5.0
+_XR_TOKEN_MAX = 128
 
 
 class XrMediaServer(MediaServer):
@@ -31,6 +34,8 @@ class XrMediaServer(MediaServer):
         self._latest_xr: Optional[XrSample] = None
         self._xr_lock = threading.Lock()
         self._xr_peers: Set[web.WebSocketResponse] = set()
+        self._xr_tokens: Dict[web.WebSocketResponse, str] = {}
+        self._xr_closing: Set[asyncio.Task] = set()
         self._xr_state = {
             "mode": None,
             "passthrough": False,
@@ -147,13 +152,27 @@ class XrMediaServer(MediaServer):
     async def _xr_signal(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(heartbeat=20)
         await ws.prepare(request)
+        # The page sends one random token per XR session. A reconnect with the same token replaces
+        # its own previous socket, which may stay half-open until the heartbeat times out.
+        token = request.query.get("session", "")
+        if not 16 <= len(token) <= _XR_TOKEN_MAX:
+            token = ""
         if self._xr_peers:
-            await ws.send_json({
-                "op": "session.busy", "message": "XR 已被其他客户端占用，请等待对方退出后重试",
-            })
-            await ws.close(code=1008, message=b"XR occupied")
-            return ws
+            if not token or any(self._xr_tokens.get(peer) != token for peer in self._xr_peers):
+                await ws.send_json({
+                    "op": "session.busy", "message": "XR is in use by another client; retry after it exits",
+                })
+                await ws.close(code=1008, message=b"XR occupied")
+                return ws
+            log.info("XR client reconnected; replacing its previous connection")
+            for peer in list(self._xr_peers):
+                self._xr_peers.discard(peer)
+                # closing a half-open socket waits for its close timeout: do not delay the new one
+                task = asyncio.create_task(peer.close(code=1000, message=b"XR reconnected"))
+                self._xr_closing.add(task)
+                task.add_done_callback(self._xr_closing.discard)
         self._xr_peers.add(ws)
+        self._xr_tokens[ws] = token
         pending_samples = asyncio.Queue(maxsize=5)
 
         async def dispatch_all() -> None:
@@ -202,6 +221,7 @@ class XrMediaServer(MediaServer):
             with suppress(asyncio.CancelledError):
                 await dispatcher
             self._xr_peers.discard(ws)
+            self._xr_tokens.pop(ws, None)
             if not self._xr_peers:
                 with self._xr_lock:
                     self._xr_state = {

@@ -429,7 +429,7 @@ To expose both tracks, register the file twice with distinct labels and prefixes
 | Video/audio uplink | One client per card; separate cards have separate owners |
 | Uplink pause/stop | Pause retains ownership; stop or disconnect cleanup releases it; disconnect detection is not immediate |
 | Video/audio downlink | Admitted clients can receive together; source playback controls may affect other viewers |
-| XR | One XR session at a time; exit or disconnect releases it |
+| XR | One XR session at a time; exit or disconnect releases it. After a dropped link the headset keeps retrying (1.2 s backoff up to 5 s, each attempt timing out after 5 s) for as long as its XR session lasts, and takes over its own previous connection with a per-session token; another client still gets `session.busy`, which ends the retry |
 
 Select `Device` or `File` on an uplink card, then start. `PC View` requests a
 preview on the server computer. Uplink audio `PC Out` controls that computer's

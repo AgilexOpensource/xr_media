@@ -258,38 +258,68 @@ function renderPoseVisualization(side) {
     context.fillText("Waiting for controller or hand tracking",center.x,canvas.height-34); context.textAlign="start";
   }
 }
+// One token per XR session: a reconnect with it takes over the seat still held by its own
+// half-open socket, while another client is still told the seat is busy.
+let xrToken = null;
+const RECONNECT_FIRST_MS = 1200, RECONNECT_MAX_MS = 5000, CONNECT_TIMEOUT_MS = 5000;
+function newXrToken() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+}
 function openSocket() {
-  const connection = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/xr-signal`);
+  const scheme = location.protocol === "https:" ? "wss" : "ws";
+  const connection = new WebSocket(`${scheme}://${location.host}/xr-signal?session=${encodeURIComponent(xrToken)}`);
   socket = connection;
   return new Promise((resolve, reject) => {
     let admitted = false;
     let denied = false;
+    // an unreachable server may only fail after the TCP timeout; give up sooner and retry
+    const timer = setTimeout(() => { if (!admitted) connection.close(); }, CONNECT_TIMEOUT_MS);
     connection.addEventListener("message", (event) => {
       const message = JSON.parse(event.data);
       if (message.op === "session.config") {
         admitted = true;
+        clearTimeout(timer);
         resolve();
       } else if (message.op === "session.busy") {
         denied = true;
-        reject(new Error(message.message));
+        reject(Object.assign(new Error(message.message), { busy:true }));
       } else if (message.op === "xr.haptic") {
         pulseController(message.side, message.intensity, message.duration_ms);
       }
     });
     connection.addEventListener("error", () => reject(new Error("XR connection failed")));
     connection.addEventListener("close", () => {
+      clearTimeout(timer);
       if (!admitted) reject(new Error("XR connection closed"));
-      if (admitted && !denied && session && socket === connection) {
-        setTimeout(() => {
-          if (!session || socket !== connection) return;
-          openSocket().catch(async (error) => {
-            await session?.end().catch(() => {});
-            ui.ready.textContent = error.message;
-          });
-        }, 1200);
-      }
+      if (admitted && !denied && session && socket === connection) reconnect(connection, session);
     });
   });
+}
+// Retries for as long as the XR session lasts; stops when it ends or another client holds the seat.
+// The robot side treats the gap as lost XR data, so motion never resumes without the operator.
+async function reconnect(lost, owner) {
+  let delay = RECONNECT_FIRST_MS;
+  for (let attempt = 1; ; attempt++) {
+    ui.ready.textContent = `XR link lost, reconnecting (attempt ${attempt})…`;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    if (session !== owner || socket !== lost) return;
+    try {
+      await openSocket();
+      ui.ready.textContent = "XR active";
+      reportPhase("reconnected", { attempts:attempt });
+      return;
+    } catch (error) {
+      if (session !== owner) return;
+      if (error.busy) {
+        await owner.end().catch(() => {});
+        ui.ready.textContent = error.message;
+        return;
+      }
+      lost = socket;
+      delay = Math.min(delay * 1.5, RECONNECT_MAX_MS);
+    }
+  }
 }
 const hapticReported = new Set();
 function reportHaptic(side, path, source, error, result) {
@@ -437,6 +467,7 @@ async function enter() {
   session = await navigator.xr.requestSession(mode, { requiredFeatures:["local-floor"], optionalFeatures:["dom-overlay","hand-tracking"], domOverlay:{ root:document.body } });
   reportPhase("session-created", { mode, overlay:!!session.domOverlayState });
   try {
+    xrToken = newXrToken();
     await openSocket();
     ({ renderer, scene, camera } = createXrRenderer(stage, mode === "immersive-vr"));
     xrOverlay = new SpatialXrOverlay(scene);

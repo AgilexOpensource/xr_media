@@ -6,7 +6,7 @@ import threading
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from aiohttp import web
+from aiohttp import WSMsgType, web
 from aiohttp.test_utils import TestClient, TestServer
 
 from xr_media import HandInput, XrMediaServer
@@ -35,6 +35,30 @@ class XrMediaServerTest(unittest.TestCase):
                 third = await client.ws_connect('/xr-signal')
                 self.assertEqual((await third.receive_json(timeout=2))['op'], 'session.config')
                 await third.close()
+        asyncio.run(scenario())
+
+    def test_xr_reconnect_with_its_session_token_replaces_the_old_socket(self):
+        async def scenario():
+            server = XrMediaServer()
+            app = web.Application()
+            app.router.add_get('/xr-signal', server._xr_signal)
+            token, other = 'a' * 32, 'b' * 32
+            async with TestClient(TestServer(app)) as client:
+                first = await client.ws_connect(f'/xr-signal?session={token}')
+                self.assertEqual((await first.receive_json(timeout=2))['op'], 'session.config')
+                for query in (f'?session={other}', '', '?session=short'):
+                    busy = await client.ws_connect('/xr-signal' + query)
+                    self.assertEqual((await busy.receive_json(timeout=2))['op'], 'session.busy')
+                    await busy.close()
+                again = await client.ws_connect(f'/xr-signal?session={token}')
+                self.assertEqual((await again.receive_json(timeout=2))['op'], 'session.config')
+                self.assertEqual(len(server._xr_peers), 1)
+                msg = await first.receive(timeout=2)   # the replaced socket is closed by the server
+                self.assertIn(msg.type, (WSMsgType.CLOSE, WSMsgType.CLOSED, WSMsgType.CLOSING))
+                await asyncio.sleep(0.05)
+                self.assertEqual(len(server._xr_peers), 1)   # its cleanup does not release the new seat
+                self.assertEqual(list(server._xr_tokens.values()), [token])
+                await again.close()
         asyncio.run(scenario())
 
     def test_xr_websocket_preserves_fifo_at_capacity(self):
