@@ -350,7 +350,7 @@ server.set_stream_playback("movie", position=12.0, duration=60.0,
 
 `MediaServerStats` 字段：`clients`、`frames_received`、`frames_replaced`、`frames_sent`、`latest_timestamp_ns`、`streams`、`audio_frames_received`、`audio_frames_sent`。`clients` 统计媒体 Peer，不等同于所有已预占入场名额；视频收到／替换计数来自下行帧缓冲，替换不等于网络丢包。
 
-`get_xr_stats()` 返回 `xr_server_received`、`xr_server_dispatched`、`xr_server_replaced`。HTTP 接口不提供用户认证，仅在可信网络使用。
+`get_xr_stats()` 返回 `xr_server_received`、`xr_server_dispatched`、`xr_server_replaced` 和 `xr_frame_rate`。头显每渲染一帧发送一个 XR 样本，所以 `xr_frame_rate`（Hz，浏览器未报告前为 `null`）就是样本频率。页面会在 `supportedFrameRates` 提供时请求最高 90 Hz，最终由浏览器决定（2026 年 11 月实测 Pico 4 浏览器接受请求但仍保持 72 Hz）。HTTP 接口不提供用户认证，仅在可信网络使用。
 
 ### 返回示例
 
@@ -383,7 +383,8 @@ server.set_stream_playback("movie", position=12.0, duration=60.0,
     "mode": null,
     "passthrough": false,
     "preview": false,
-    "ui_locked": false
+    "ui_locked": false,
+    "frame_rate": null
   }
 }
 ```

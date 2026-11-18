@@ -350,7 +350,7 @@ Parsing helpers: `RigidPose.from_mapping(data)`, `HandInput.from_mapping(data)`,
 
 `MediaServerStats` fields: `clients`, `frames_received`, `frames_replaced`, `frames_sent`, `latest_timestamp_ns`, `streams`, `audio_frames_received`, `audio_frames_sent`. `clients` counts media peers, not all reserved admission seats. Video received/replaced counts refer to downlink frame buffers; replacements are not network packet loss.
 
-`get_xr_stats()` returns `xr_server_received`, `xr_server_dispatched`, `xr_server_replaced`. HTTP endpoints have no user authentication; use trusted networks.
+`get_xr_stats()` returns `xr_server_received`, `xr_server_dispatched`, `xr_server_replaced` and `xr_frame_rate`. The headset sends one XR sample per rendered frame, so `xr_frame_rate` (Hz, `null` until the browser reports it) is the sample rate. The page asks the browser for up to 90 Hz where `supportedFrameRates` offers it; the browser has the final say (the Pico 4 browser tested in November 2026 accepts the request but stays at 72 Hz). HTTP endpoints have no user authentication; use trusted networks.
 
 ### Response examples
 
@@ -383,7 +383,8 @@ Before the first XR sample, `/api/xr/state` returns:
     "mode": null,
     "passthrough": false,
     "preview": false,
-    "ui_locked": false
+    "ui_locked": false,
+    "frame_rate": null
   }
 }
 ```

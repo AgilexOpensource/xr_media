@@ -373,6 +373,20 @@ function reportError(phase, error) {
   fetch("/api/xr/error", { method:"POST", headers:{ "content-type":"application/json" }, body, keepalive:true }).catch(() => {});
   console.error(`XR ${phase} error`, error);
 }
+// Some headset browsers default WebXR to 72 Hz; ask for up to this rate where offered.
+const TARGET_FRAME_RATE = 90;
+async function requestFrameRate(xrSession) {
+  const rates = Array.from(xrSession.supportedFrameRates || []);
+  const choices = rates.filter(rate => rate <= TARGET_FRAME_RATE);
+  const target = choices.length ? Math.max(...choices) : null;
+  if (target && typeof xrSession.updateTargetFrameRate === "function" && target > (xrSession.frameRate || 0)) {
+    try { await xrSession.updateTargetFrameRate(target); } catch (error) { reportError("frame-rate", error); }
+  }
+  reportPhase("frame-rate", { supported:rates, requested:target, frameRate:xrSession.frameRate ?? null });
+}
+function showFrameRate() {
+  if (session) ui.ready.textContent = session.frameRate ? `XR active · ${Math.round(session.frameRate)} Hz` : "XR active";
+}
 function reportPhase(phase, details = {}) {
   fetch("/api/xr/event", { method:"POST", headers:{ "content-type":"application/json" }, body:JSON.stringify({ phase, details }), keepalive:true }).catch(() => {});
 }
@@ -435,13 +449,15 @@ function renderFrame(_time, frame) {
   const zUpHands = { left:zUpHand(hands.left), right:zUpHand(hands.right) };
   xrOverlay?.update(zUpHands);
   if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ op:"xr.sample", t_ms:Date.now(), headset_id:"headset", xr_mode:activeMode, passthrough:activeMode === "immersive-ar", preview:posePreviewEnabled(), ui_locked:locked, hmd:zUpHmd, hmd_tracked:true, left:zUpHands.left, right:zUpHands.right }));
+    socket.send(JSON.stringify({ op:"xr.sample", t_ms:Date.now(), headset_id:"headset", xr_mode:activeMode, passthrough:activeMode === "immersive-ar", preview:posePreviewEnabled(), ui_locked:locked, frame_rate:session.frameRate ?? null, hmd:zUpHmd, hmd_tracked:true, left:zUpHands.left, right:zUpHands.right }));
   }
   spatialUi?.setFrame?.(frame);
   spatialUi?.update(frame, viewer, _time);
   renderer.render(scene, camera);
   if (firstXrFrame) {
     firstXrFrame = false;
+    // Some browsers ignore a rate change before the session renders its first frame.
+    requestFrameRate(frame.session).finally(showFrameRate);
     const glError = renderer.getContext().getError();
     reportPhase("first-frame", {
       views:viewer.views.length,
@@ -507,6 +523,10 @@ async function enter() {
   ui.ready.textContent = "XR active";
   session.addEventListener("end", () => { setLocked(false); renderer?.setAnimationLoop(null); spatialUi?.dispose(); spatialUi=null; xrOverlay?.dispose(); xrOverlay=null; renderer?.dispose(); renderer=null; scene=null; camera=null; session=null; space=null; activeMode=null; socket?.close(); socket=null; document.body.classList.remove("xr-active"); card.classList.remove("playing"); ui.enter.textContent="Enter XR"; ui.lock.hidden=true; ui.pass.disabled=false; updateReadiness(); }, { once:true });
   renderer.setAnimationLoop(onFrame);
+  session.addEventListener("frameratechange", () => {
+    showFrameRate();
+    reportPhase("frame-rate-change", { frameRate:session?.frameRate ?? null });
+  });
 }
 
 function setLocked(value) {

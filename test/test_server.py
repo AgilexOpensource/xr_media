@@ -61,6 +61,34 @@ class XrMediaServerTest(unittest.TestCase):
                 await again.close()
         asyncio.run(scenario())
 
+    def test_xr_frame_rate_reaches_stats(self):
+        async def scenario():
+            server = XrMediaServer()
+            app = web.Application()
+            app.router.add_get("/xr-signal", server._xr_signal)
+            client = TestClient(TestServer(app))
+            await client.start_server()
+            try:
+                self.assertIsNone(server.get_xr_stats()["xr_frame_rate"])
+                ws = await client.ws_connect("/xr-signal")
+                await ws.receive_json()
+                for value, expected in ((90, 90.0), ("90", None), (True, None), (-1, None), (72.0, 72.0)):
+                    await ws.send_json({"op": "xr.sample", "t_ms": 1, "frame_rate": value})
+                    for _ in range(100):
+                        if server.get_xr_stats()["xr_frame_rate"] == expected:
+                            break
+                        await asyncio.sleep(0.01)
+                    self.assertEqual(server.get_xr_stats()["xr_frame_rate"], expected)
+                await ws.close()
+                for _ in range(100):
+                    if server.get_xr_stats()["xr_frame_rate"] is None:
+                        break
+                    await asyncio.sleep(0.01)
+                self.assertIsNone(server.get_xr_stats()["xr_frame_rate"])
+            finally:
+                await client.close()
+        asyncio.run(scenario())
+
     def test_xr_websocket_preserves_fifo_at_capacity(self):
         self._check_busy_callback_queue(6, [1, 2, 3, 4, 5, 6], 0)
 

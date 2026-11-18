@@ -17,11 +17,17 @@ from .xr import XrSample
 
 log = logging.getLogger("xr_media.server")
 OnXrSample = Callable[[XrSample], None]
-ASSET_VERSION = "20261117-reconnect1"
+ASSET_VERSION = "20261118-framerate2"
 MAX_HAPTIC_MS = 5000.0
 _XR_ERROR_LOG_PERIOD_S = 5.0
 _XR_TOKEN_MAX = 128
 
+
+def _frame_rate(value) -> Optional[float]:
+    """A positive finite frame rate from the client, or None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if math.isfinite(value) and value > 0 else None
 
 class XrMediaServer(MediaServer):
     """Media server with WebXR input and an immersive card UI."""
@@ -41,6 +47,7 @@ class XrMediaServer(MediaServer):
             "passthrough": False,
             "preview": False,
             "ui_locked": False,
+            "frame_rate": None,
         }
         self._xr_received = 0
         self._xr_dispatched = 0
@@ -53,11 +60,15 @@ class XrMediaServer(MediaServer):
             return self._latest_xr
 
     def get_xr_stats(self) -> dict:
-        """Return the counters ``xr_server_received``, ``xr_server_dispatched`` and ``xr_server_replaced``."""
+        """Return the counters ``xr_server_received``, ``xr_server_dispatched``, ``xr_server_replaced``
+        and ``xr_frame_rate``, the headset's reported XR frame rate in Hz (``None`` when unknown)."""
+        with self._xr_lock:
+            frame_rate = self._xr_state["frame_rate"]
         return {
             "xr_server_received": self._xr_received,
             "xr_server_dispatched": self._xr_dispatched,
             "xr_server_replaced": self._xr_replaced,
+            "xr_frame_rate": frame_rate,
         }
 
     def send_haptic(self, side: str, intensity: float, duration_ms: float) -> bool:
@@ -227,6 +238,7 @@ class XrMediaServer(MediaServer):
                         "passthrough": bool(body.get("passthrough")),
                         "preview": bool(body.get("preview")),
                         "ui_locked": bool(body.get("ui_locked")),
+                        "frame_rate": _frame_rate(body.get("frame_rate")),
                     }
                 self._xr_received += 1
                 if pending_samples.full():
@@ -246,6 +258,7 @@ class XrMediaServer(MediaServer):
                         "passthrough": False,
                         "preview": False,
                         "ui_locked": False,
+                        "frame_rate": None,
                     }
         return ws
 
